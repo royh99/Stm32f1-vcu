@@ -30,7 +30,7 @@
 #define MIN_PWM_DIGITS 11
 #define PERIPH_CLK      ((uint32_t)36000000)
 
-#define RCC_CLOCK_SETUP rcc_clock_setup_in_hse_16mhz_out_72mhz
+#define RCC_CLOCK_SETUP() rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE16_72MHZ])
 
 #define PWM_TIMER     TIM1
 #define PWM_TIMRST    RST_TIM1

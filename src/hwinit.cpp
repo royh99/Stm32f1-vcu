@@ -73,23 +73,23 @@ void clock_setup(void)
    rcc_periph_clock_enable(RCC_CAN2); //CAN2
   // rcc_periph_clock_enable(RCC_SPI2);  //CAN3
   // rcc_periph_clock_enable(RCC_SPI3);  //Digital POTS
-   rcc_periph_clock_enable(RCC_DAC);
+   //rcc_periph_clock_enable(RCC_DAC);
 }
 
 void dac_setup()
 {
-   //dac_enable(CHANNEL_1);
-   //dac_enable(CHANNEL_2);
-   dac_enable(CHANNEL_D); //enable chan 1 and 2
+   //dac_enable(DAC_CHANNEL1);
+   //dac_enable(DAC_CHANNEL2);
+   dac_enable(DAC1, DAC_CHANNEL_BOTH); //enable chan 1 and 2
    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO4 | GPIO5);
    
-   dac_set_trigger_source(DAC_CR_TSEL1_SW);
-   dac_load_data_buffer_single(0, RIGHT12, CHANNEL_1); //output 0
-   dac_software_trigger(CHANNEL_1);
-   
-   dac_set_trigger_source(DAC_CR_TSEL2_SW);
-   dac_load_data_buffer_single(0, RIGHT12, CHANNEL_2);
-   dac_software_trigger(CHANNEL_2);	
+   dac_set_trigger_source(DAC1, DAC_CR_TSEL1_SW);
+   dac_load_data_buffer_single(DAC1, 0, DAC_ALIGN_RIGHT12, DAC_CHANNEL1); //output 0
+   dac_software_trigger(DAC1, DAC_CHANNEL1);
+
+   dac_set_trigger_source(DAC1, DAC_CR_TSEL2_SW);
+   dac_load_data_buffer_single(DAC1, 0, DAC_ALIGN_RIGHT12, DAC_CHANNEL2);
+   dac_software_trigger(DAC1,DAC_CHANNEL2);	
 }
 
 void spi2_setup()   //spi 2 used for CAN3
@@ -181,9 +181,9 @@ void nvic_setup(void)
 
 void rtc_setup()
 {
-   //Base clock is HSE/128 = 8MHz/128 = 62.5kHz
-   //62.5kHz / (62499 + 1) = 1Hz
-   rtc_auto_awake(RCC_HSE, 124999); //1s tick from 16MHZ clock
+   //Base clock is HSE/128 
+   //rtc_auto_awake(RCC_HSE, (RCC_HSE/12800)-1); //10ms tick from HSE clock
+   rtc_auto_awake(RCC_HSE, (RCC_HSE/128)-1); //1s tick from HSE clock
    rtc_set_counter_val(0);
    //* Enable the RTC interrupt to occur off the SEC flag.
    rtc_clear_flag(RTC_SEC);
@@ -196,7 +196,7 @@ void tim_setup()
    //Code for timer 1 to create oil pump control pwm for Toyota hybrid gearbox
    //Needs to be 1khz
    ////////////////////////////////////////////////////////////////////////
-   gpio_set_mode(GPIOE,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
+/*    gpio_set_mode(GPIOE,GPIO_MODE_OUTPUT_2_MHZ,	// Low speed (only need 1khz)
                  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,GPIO9);	// GPIOE9=TIM1.CH1 Alt
 
    timer_disable_counter(TIM1);
@@ -208,7 +208,7 @@ void tim_setup()
    timer_enable_break_main_output(TIM1);
    timer_set_oc_value(TIM1, TIM_OC1, 800);//duty. 1000 = 52% , 500 = 76% , 1500=28%
    timer_set_period(TIM1, 2100);
-   timer_enable_counter(TIM1);
+   timer_enable_counter(TIM1); */
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 }

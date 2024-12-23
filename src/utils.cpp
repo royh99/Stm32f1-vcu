@@ -245,7 +245,7 @@ void SelectDirection(Vehicle* vehicle)
 float ProcessUdc(int motorSpeed)
 {
 
-    if (Param::GetInt(Param::Type) == 0)
+    if (Param::GetInt(Param::ShuntType) == 0)
     {
         float udc = ((float)ISA::Voltage)/1000;//get voltage from isa sensor and post to parameter database
         Param::SetFloat(Param::udc, udc);
@@ -266,7 +266,7 @@ float ProcessUdc(int motorSpeed)
         Param::SetFloat(Param::deltaV, MAX(deltaVolts1, deltaVolts2));
     }
 
-    else if (Param::GetInt(Param::Type) == 1)
+    else if (Param::GetInt(Param::ShuntType) == 1)
 
     {
         float udc = ((float)SBOX::Voltage2)/1000;//get output voltage from sbox sensor and post to parameter database

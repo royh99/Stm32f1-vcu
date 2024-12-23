@@ -29,18 +29,18 @@ extern "C" void __cxa_pure_virtual()
 static Stm32Scheduler* scheduler;
 static bool chargeMode = false;
 static bool chargeModeDC = false;
-static bool chgLck = false;
-static CanHardware* canInterface[2];
+static bool ChgLck = false;
+static CanHardware* canInterface[3];
 static CanMap* canMap;
 static ChargeModes targetCharger;
 static ChargeInterfaces targetChgint;
-static uint8_t chgSet;
-static bool runChg;
-static uint8_t chgHrs_tmp;
-static uint8_t chgMins_tmp;
-static uint16_t chgDur_tmp;
-static uint32_t chgTicks=0,chgTicks_1Min=0;
-static bool startSig=false;
+static uint8_t ChgSet;
+static bool RunChg;
+static uint8_t ChgHrs_tmp;
+static uint8_t ChgMins_tmp;
+static uint16_t ChgDur_tmp;
+static uint32_t ChgTicks=0,ChgTicks_1Min=0;
+static bool StartSig=false;
 static bool ACrequest=false;
 static bool initbyStart=false;
 static bool initbyCharge=false;
@@ -90,39 +90,39 @@ static void Ms200Task(void)
     Param::SetInt(Param::Hour,hours);
     Param::SetInt(Param::Min,minutes);
     Param::SetInt(Param::Sec,seconds);
-    Param::SetInt(Param::ChgTime,chgDur_tmp);
-    if(chgSet==2 && !chgLck)  //if in timer mode and not locked out from a previous full charge.
+    Param::SetInt(Param::ChgTime,ChgDur_tmp);
+    if(ChgSet==2 && !ChgLck)  //if in timer mode and not locked out from a previous full charge.
     {
         if(opmode!=MOD_CHARGE)
         {
-            if((chgHrs_tmp==hours)&&(chgMins_tmp==minutes)&&(chgDur_tmp!=0))runChg=true;//if we arrive at set charge time and duration is non zero then initiate charge
-            else runChg=false;
+            if((ChgHrs_tmp==hours)&&(ChgMins_tmp==minutes)&&(ChgDur_tmp!=0))RunChg=true;//if we arrive at set charge time and duration is non zero then initiate charge
+            else RunChg=false;
         }
 
         if(opmode==MOD_CHARGE)
         {
-            if(chgTicks!=0)
+            if(ChgTicks!=0)
             {
-                chgTicks--; //decrement charge timer ticks
-                chgTicks_1Min++;
+                ChgTicks--; //decrement charge timer ticks
+                ChgTicks_1Min++;
             }
 
-            if(chgTicks==0)
+            if(ChgTicks==0)
             {
-                runChg=false; //end charge if still charging once timer expires.
-                chgTicks = (GetInt(Param::Chg_Dur)*300);//recharge the tick timer
+                RunChg=false; //end charge if still charging once timer expires.
+                ChgTicks = (GetInt(Param::Chg_Dur)*300);//recharge the tick timer
             }
 
-            if (chgTicks_1Min==300)
+            if (ChgTicks_1Min==300)
             {
-                chgTicks_1Min=0;
-                chgDur_tmp--; //countdown minutes of charge time remaining.
+                ChgTicks_1Min=0;
+                ChgDur_tmp--; //countdown minutes of charge time remaining.
             }
         }
 
     }
-    if(chgSet==0 && !chgLck) runChg=true;//enable from webui if we are not locked out from an auto termination
-    if(chgSet==1) runChg=false;//disable from webui
+    if(ChgSet==0 && !ChgLck) RunChg=true;//enable from webui if we are not locked out from an auto termination
+    if(ChgSet==1) RunChg=false;//disable from webui
 
     //Handle PP on the Charging port
     if(Param::GetInt(Param::GPA1Func) == IOMatrix::PILOT_PROX)
@@ -134,18 +134,18 @@ static void Ms200Task(void)
 
 
         //if PP is less than threshold and currently disabled and not already finished
-        if (ppValue < ppThresh && chgSet==1 && !chgLck)
+        if (ppValue < ppThresh && ChgSet==1 && !ChgLck)
         {
-            runChg=true;
+            RunChg=true;
         }
         else if (ppValue > ppThresh)
         {
             //even if timer was enabled, change to disabled, we've unplugged
-            runChg=false;
+            RunChg=false;
         }
     }
 
-    if(selectedCharger->ControlCharge(runChg, ACrequest) && (opmode != MOD_RUN))
+    if(selectedCharger->ControlCharge(RunChg, ACrequest) && (opmode != MOD_RUN))
     {
         chargeMode = true;   //AC charge mode
         Param::SetInt(Param::chgtyp,AC);
@@ -174,21 +174,21 @@ static void Ms200Task(void)
     {
         if(Param::GetFloat(Param::udc)>=Param::GetFloat(Param::Voltspnt) && Param::GetFloat(Param::idc)<=Param::GetFloat(Param::IdcTerm))
         {
-            runChg=false;//end charge
-            chgLck=true;//set charge lockout flag
+            RunChg=false;//end charge
+            ChgLck=true;//set charge lockout flag
         }
         
         if(selectedBMS->MaxChargeCurrent()==0)//BMS can command an AC charge shutdown if its current limit is 0
         {
-            runChg=false;//end charge
-            chgLck=true;//set charge lockout flag
+            RunChg=false;//end charge
+            ChgLck=true;//set charge lockout flag
         }
         
         
     }
     if(opmode==MOD_RUN)
     {
-        chgLck=false;//reset charge lockout flag when we drive off
+        ChgLck=false;//reset charge lockout flag when we drive off
         
         //Brake Vac Sensor
         if(Param::GetInt(Param::GPA1Func) == IOMatrix::VAC_SENSOR)
@@ -231,10 +231,10 @@ static void Ms200Task(void)
         IOMatrix::GetPin(IOMatrix::BRAKEVACPUMP)->Clear();
     }
     
-    //dac_load_data_buffer_single(Param::GetInt(Param::DAC1), RIGHT12, CHANNEL_1);
-    //dac_software_trigger(CHANNEL_1);
-    //dac_load_data_buffer_single(Param::GetInt(Param::DAC2), RIGHT12, CHANNEL_2);
-    //dac_software_trigger(CHANNEL_2);
+    dac_load_data_buffer_single(DAC1, Param::GetInt(Param::DAC_1), DAC_ALIGN_RIGHT12, DAC_CHANNEL1);
+    dac_software_trigger(DAC1, DAC_CHANNEL1);
+    dac_load_data_buffer_single(DAC1, Param::GetInt(Param::DAC_2), DAC_ALIGN_RIGHT12, DAC_CHANNEL2);
+    dac_software_trigger(DAC1, DAC_CHANNEL2);
     
 }
 
@@ -242,25 +242,25 @@ uint8_t i = 0;
 
 static void Ms100Task(void)
 {
-    /*    
-        if (i < 115) 
+       
+/*         if (i < 115) 
         {
-        dac_load_data_buffer_single(400+(i*32), RIGHT12, CHANNEL_1);
-        dac_software_trigger(CHANNEL_1);  
-        dac_load_data_buffer_single(200+(i*16), RIGHT12, CHANNEL_2);
-        dac_software_trigger(CHANNEL_2);
+        dac_load_data_buffer_single(DAC1, 400+(i*32), DAC_ALIGN_RIGHT12, DAC_CHANNEL1);
+        dac_software_trigger(DAC1, DAC_CHANNEL1);  
+        dac_load_data_buffer_single(DAC1, 200+(i*16), DAC_ALIGN_RIGHT12, DAC_CHANNEL2);
+        dac_software_trigger(DAC1, DAC_CHANNEL2);
         i++;
         }
         if (i >= 115) 
         {
-        dac_load_data_buffer_single(400+((228-i)*32), RIGHT12, CHANNEL_1);
-        dac_software_trigger(CHANNEL_1);  
-        dac_load_data_buffer_single(200+((228-i)*16), RIGHT12, CHANNEL_2);
-        dac_software_trigger(CHANNEL_2);
+        dac_load_data_buffer_single(DAC1, 400+((228-i)*32), DAC_ALIGN_RIGHT12, DAC_CHANNEL1);
+        dac_software_trigger(DAC1, DAC_CHANNEL1);  
+        dac_load_data_buffer_single(DAC1, 200+((228-i)*16), DAC_ALIGN_RIGHT12, DAC_CHANNEL2);
+        dac_software_trigger(DAC1, DAC_CHANNEL2);
         i++;
         }
-        if (i==229) i=0;
-    */    
+        if (i==229) i=0; */
+       
     DigIo::led_out.Toggle();
     iwdg_reset();
     float cpuLoad = scheduler->GetCpuLoad() / 10.0f;
@@ -268,14 +268,17 @@ static void Ms100Task(void)
     Param::SetInt(Param::lasterr, ErrorMessage::GetLastError());
     int opmode = Param::GetInt(Param::opmode);
     utils::SelectDirection(selectedVehicle);
-    utils::CalcSOC();
-       
+    if(Param::GetInt(Param::ShuntType) != 0)//Do not do any SOC calcs
+    {
+        utils::CalcSOC();
+    }
     selectedInverter->Task100Ms();
     selectedVehicle->Task100Ms();
     selectedCharger->Task100Ms();
     selectedBMS->Task100Ms();
     selectedDCDC->Task100Ms();
     //selectedShifter->Task100Ms();
+    //selectedHeater->Task100Ms();
     canMap->SendAll();
 
     if (Param::GetInt(Param::dir) < 0)
@@ -308,7 +311,7 @@ static void Ms100Task(void)
        
     if(targetChgint == chargeModeDC) selectedChargeInt->Task100Ms();// send the 100ms task request for the lim all the time and for others if in DC charge mode
        
-    if(selectedChargeInt->DCFCRequest(runChg))//Request to run dc fast charge
+    if(selectedChargeInt->DCFCRequest(RunChg))//Request to run dc fast charge
     {
         //Here we receive a valid DCFC startup request.
         if(opmode != MOD_RUN) chargeMode = true;// set charge mode to true to bring up hv
@@ -323,7 +326,7 @@ static void Ms100Task(void)
 
     if(!chargeModeDC)//Request to run ac charge from the interface (e.g. LIM) if we are NOT in DC charge mode.
     {
-        ACrequest=selectedChargeInt->ACRequest(runChg);
+        ACrequest=selectedChargeInt->ACRequest(RunChg);
 			  
     }
     Param::SetInt(Param::HeatReq,IOMatrix::GetPin(IOMatrix::HEATREQ)->Get());
@@ -358,10 +361,10 @@ static void Ms10Task(void)
     int requestedDirection = Param::GetInt(Param::dir);
     int rollingDirection = 0;
 
-    dac_load_data_buffer_single(Param::GetInt(Param::DAC1), RIGHT12, CHANNEL_1);
-    dac_software_trigger(CHANNEL_1);
-    dac_load_data_buffer_single(Param::GetInt(Param::DAC2), RIGHT12, CHANNEL_2);
-    dac_software_trigger(CHANNEL_2);
+   // dac_load_data_buffer_single(Param::GetInt(Param::DAC1), RIGHT12, CHANNEL_1);
+   // dac_software_trigger(CHANNEL_1);
+   // dac_load_data_buffer_single(Param::GetInt(Param::DAC2), RIGHT12, CHANNEL_2);
+   // dac_software_trigger(CHANNEL_2);
     
     ErrorMessage::SetTime(rtc_get_counter_val());
     
@@ -410,23 +413,40 @@ static void Ms10Task(void)
     selectedInverter->SetTorque(torquePercent);
 
     //Brake light based on regen being below the set threshold
-    if(torquePercent < Param::GetFloat(Param::RegenBrakeLight))
+    if(Param::GetInt(Param::reversemotor) == 0)
     {
-        //enable Brake Light Ouput
-        IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
+        if((torquePercent * requestedDirection) < Param::GetFloat(Param::RegenBrakeLight))//if reverse we flip signs of torque, so multiply by direction- reverse is -1
+        {
+            //enable Brake Light Ouput
+            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
+        }
+        else
+        {
+            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
+        }
     }
-    else
+    else //Motor torques flipped so need to flip again
     {
-        IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
+        if((torquePercent * requestedDirection * -1) < Param::GetFloat(Param::RegenBrakeLight))//if reverse we flip signs of torque, so multiply by direction- reverse is -1, reversed again for MotRev
+        {
+            //enable Brake Light Ouput
+            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Set();
+        }
+        else
+        {
+            IOMatrix::GetPin(IOMatrix::BRAKELIGHT)->Clear();
+        }
     }
-
     //speed = ABS(selectedInverter->GetMotorSpeed());//set motor rpm on interface NO ABS allowed on speed as we need to know direction
     speed = selectedInverter->GetMotorSpeed();//set motor rpm on interface
 
     Param::SetInt(Param::speed, speed);
     utils::GetDigInputs(canInterface[Param::GetInt(Param::InverterCan)]);
 
-    selectedVehicle->SetRevCounter(ABS(speed)); //ABS allowed here to keep number from rolling over.
+    if(opmode==MOD_RUN || opmode==MOD_CHARGE) //only set rev counter when in RUN or CHARGE
+    {
+        selectedVehicle->SetRevCounter(ABS(speed)); //ABS allowed here to keep number from rolling over.
+    }
     selectedVehicle->SetTemperatureGauge(Param::GetFloat(Param::tmphs));
     selectedVehicle->Task10Ms();
     //selectedDCDC->Task10Ms();
@@ -456,13 +476,13 @@ static void Ms10Task(void)
         DigIo::prec_out.Clear();
         Param::SetInt(Param::dir, 0); // shift to park/neutral on shutdown regardless of shifter pos
         selectedVehicle->DashOff();
-        startSig=false;//reset for next time
+        StartSig=false;//reset for next time
         if( !Throttle::PotTest() ) //check if throttle not pressed
         //if(Param::GetInt(Param::pot) < Param::GetInt(Param::potmin))
         {
             if ((selectedVehicle->Start() && selectedVehicle->Ready()))
             {
-                startSig=true;
+                StartSig=true;
                 opmode = MOD_PRECHARGE;//proceed to precharge if 1)throttle not pressed , 2)ign on , 3)start signal rx
                 vehicleStartTime = rtc_get_counter_val();
                 initbyStart=true;
@@ -489,10 +509,10 @@ static void Ms10Task(void)
         if(rlyDly==0) DigIo::prec_out.Set();//commence precharge
         if ((stt & (STAT_POTPRESSED | STAT_UDCBELOWUDCSW | STAT_UDCLIM)) == STAT_NONE)
         {
-            if(startSig)
+            if(StartSig)
             {
                 opmode = MOD_RUN;
-                startSig=false;//reset for next time
+                StartSig=false;//reset for next time
                 rlyDly=25;//Recharge sequence timer
             }
             else if(chargeMode)
@@ -513,7 +533,7 @@ static void Ms10Task(void)
         break;
         
         case MOD_PRECHGFAIL:
-        startSig=false;
+        StartSig=false;
         DigIo::prec_out.Clear();
         if(initbyCharge && !chargeMode) opmode = MOD_OFF;//only go to off if the signal from charge or vehicle start is removed
         if(initbyStart && !selectedVehicle->Ready()) opmode = MOD_OFF;//this avoids oscillation in the event of a precharge system failure
@@ -549,8 +569,8 @@ static void Ms10Task(void)
     }
     
     ControlCabHeater(opmode);
-    if (Param::GetInt(Param::Type) == 1)  SBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);//BMW contactor box
-    //if (Param::GetInt(Param::Type) == 2)  VWBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);//VW contactor box
+    if (Param::GetInt(Param::ShuntType) == 2)  SBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);//BMW contactor box
+    //if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::ControlContactors(opmode,canInterface[Param::GetInt(Param::ShuntCan)]);//VW contactor box
     
 }
 
@@ -688,7 +708,7 @@ static void UpdateDCDC()
 
 //Whenever the user clears mapped can messages or changes the
 //CAN interface of a device, this will be called by the CanHardware module
-static void HandleClear()
+static void SetCanFilters()
 {
     CanHardware* inverter_can = canInterface[Param::GetInt(Param::InverterCan)];
     CanHardware* vehicle_can = canInterface[Param::GetInt(Param::VehicleCan)];
@@ -705,8 +725,8 @@ static void HandleClear()
     selectedDCDC->SetCanInterface(dcdc_can);
     canOBD2.SetCanInterface(obd2_can);
     
-    if (Param::GetInt(Param::Type) == 0)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
-    if (Param::GetInt(Param::Type) == 1)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
+    if (Param::GetInt(Param::ShuntType) == 1)  ISA::RegisterCanMessages(shunt_can);//select isa shunt
+    if (Param::GetInt(Param::ShuntType) == 2)  SBOX::RegisterCanMessages(shunt_can);//select bmw sbox
     
 }
 
@@ -776,10 +796,10 @@ void Param::Change(Param::PARAM_NUM paramNum)
     Throttle::throtmax = Param::GetFloat(Param::throtmax);
     Throttle::throtmin = Param::GetFloat(Param::throtmin);
     Throttle::throtdead = Param::GetFloat(Param::throtdead);
-    Throttle::idcmin = Param::GetFloat(Param::idcmin);
-    Throttle::idcmax = Param::GetFloat(Param::idcmax);
-    Throttle::udcmin = Param::GetFloat(Param::udcmin);
-    Throttle::udcmax = Param::GetFloat(Param::udclim);
+    //Throttle::idcmin = Param::GetFloat(Param::idcmin);
+    //Throttle::idcmax = Param::GetFloat(Param::idcmax);
+    //Throttle::udcmin = Param::GetFloat(Param::udcmin);
+    //Throttle::udcmax = Param::GetFloat(Param::udclim);
     Throttle::speedLimit = Param::GetInt(Param::revlim);
     Throttle::regenRamp = Param::GetFloat(Param::regenramp);
     Throttle::throttleRamp = Param::GetFloat(Param::throtramp);
@@ -787,18 +807,18 @@ void Param::Change(Param::PARAM_NUM paramNum)
     Throttle::regenBrake = Param::GetFloat(Param::regenBrake);
     targetCharger=static_cast<ChargeModes>(Param::GetInt(Param::chargemodes));//get charger setting from menu
     targetChgint=static_cast<ChargeInterfaces>(Param::GetInt(Param::interface));//get interface setting from menu
-    if(chgSet==1)
+    if(ChgSet==1)
     {
         seconds=Param::GetInt(Param::Set_Sec);//only update these params if charge command is set to disable
         minutes=Param::GetInt(Param::Set_Min);
         hours=Param::GetInt(Param::Set_Hour);
         days=Param::GetInt(Param::Set_Day);
-        chgHrs_tmp=GetInt(Param::Chg_Hrs);
-        chgMins_tmp=GetInt(Param::Chg_Min);
-        chgDur_tmp=GetInt(Param::Chg_Dur);
+        ChgHrs_tmp=GetInt(Param::Chg_Hrs);
+        ChgMins_tmp=GetInt(Param::Chg_Min);
+        ChgDur_tmp=GetInt(Param::Chg_Dur);
     }
-    chgSet = Param::GetInt(Param::Chgctrl);//0=enable,1=disable,2=timer.
-    chgTicks = (GetInt(Param::Chg_Dur)*300);//number of 200ms ticks that equates to charge timer in minutes
+    ChgSet = Param::GetInt(Param::Chgctrl);//0=enable,1=disable,2=timer.
+    ChgTicks = (GetInt(Param::Chg_Dur)*300);//number of 200ms ticks that equates to charge timer in minutes
     IOMatrix::AssignFromParams();
     IOMatrix::AssignFromParamsAnalogue();
 }
@@ -814,9 +834,9 @@ static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is wh
         break;
 
     default:
-        if (Param::GetInt(Param::Type) == 0)  ISA::DecodeCAN(id, data);
-        if (Param::GetInt(Param::Type) == 1)  SBOX::DecodeCAN(id, data);
-        //if (Param::GetInt(Param::Type) == 2)  VWBOX::DecodeCAN(id, data);
+        if (Param::GetInt(Param::ShuntType) == 1)  ISA::DecodeCAN(id, data);
+        if (Param::GetInt(Param::ShuntType) == 2)  SBOX::DecodeCAN(id, data);
+        //if (Param::GetInt(Param::ShuntType) == 3)  VWBOX::DecodeCAN(id, data);
         selectedInverter->DecodeCAN(id, data);
         selectedVehicle->DecodeCAN(id, data);
         selectedCharger->DecodeCAN(id, data);
@@ -875,17 +895,20 @@ extern "C" int main(void)
     rtc_setup();
     ConfigureVariantIO();
     //gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, AFIO_MAPR_CAN2_REMAP | AFIO_MAPR_TIM1_REMAP_FULL_REMAP);//32f107
-    gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, 0); //AFIO_MAPR_TIM3_REMAP_FULL_REMAP);//disable JTAG, enable SWD, Remap tim3 to PC6, 7 , 8 ,9
-    //gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, 0);//disable JTAG, enable SWD,
+    //gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, 0 AFIO_MAPR_TIM3_REMAP_FULL_REMAP);//disable JTAG, enable SWD, Remap tim3 to PC6, 7 , 8 ,9
+    gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, 0);//disable JTAG, enable SWD,
     nvic_setup();
     parm_load();
     tim3_setup(); //For general purpose PWM output
     Param::Change(Param::PARAM_LAST);
 
     Terminal t(USART3, TermCmds);
+	usart_set_baudrate(USART3, 921600); // overwrite 115200 baud rate in terminal initialisation
+    usart_set_stopbits(USART3, USART_STOPBITS_1);
+
     Stm32Can c(CAN1, CanHardware::Baud500);
     Stm32Can c2(CAN2, CanHardware::Baud500, true);
-    FunctionPointerCallback cb(CanCallback, HandleClear);
+    FunctionPointerCallback cb(CanCallback, SetCanFilters);
     Stm32Can *CanMapDev = &c;
     if (Param::GetInt(Param::CanMapCan) == 0)
     {
@@ -905,7 +928,7 @@ extern "C" int main(void)
     c2.AddCallback(&cb);
     TerminalCommands::SetCanMap(&cm);
     canMap = &cm;
-	HandleClear();
+	SetCanFilters();
 
     CanHardware* shunt_can = canInterface[Param::GetInt(Param::ShuntCan)];
 

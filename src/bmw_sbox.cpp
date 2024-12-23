@@ -180,6 +180,13 @@ void SBOX::ControlContactors(int opmode, CanHardware* can)
       case 3://Precharge fail
         CCByte=0x00;//all contactors off
          break;
+		 
+	//   CCByte = 0x62; //Negative contactor activated ?      0011 0010
+    //   CCByte = 0x0A; //Positive contactor activated ?      0000 1010
+    //   CCByte = 0x86; //Precharge contactor activated ?     1000 0110
+	//   CCByte = 0x6A; //Neg and Pos contactor activated ??  0110 1010
+	//   CCByte = 0xAA; //All contactors activated            1010 1010
+	//   CCByte = 0xA6; //Prech and Neg contactors activated  1010 0110
 
     }
    CRCByte = BMW_crc8(bytes,8);

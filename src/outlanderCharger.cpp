@@ -46,6 +46,7 @@ bool outlanderCharger::ControlCharge(bool RunCh, bool ACReq)
 		if (evseDuty > 5)
 		{
 			clearToStart=true;	
+			Param::SetInt(Param::CtrlPilot_AC, evseDuty);
 			return true;
 		}
 		else

@@ -19,6 +19,8 @@
 
 #ifndef SIMPBMS_H
 #define SIMPBMS_H
+#include "bms.h"
+#include "canhardware.h"
 #include <stdint.h>
 
 class SimpBMS: public BMS
